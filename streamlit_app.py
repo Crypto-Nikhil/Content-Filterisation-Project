@@ -58,14 +58,26 @@ def moderate_text(text, categories):
 
 def moderate_file(uploaded_file, categories):
     ext = os.path.splitext(uploaded_file.name)[1].lower()
-    flags = []
-    if ext in [".jpg", ".jpeg", ".png"] and categories["NSFW"]:
-        flags.append("🔴 NSFW Detected (Image)")
-    elif ext in [".mp3", ".wav"] and categories["Profanity"]:
-        flags.append("🔴 Profanity Detected (Audio)")
-    elif ext == ".mp4" and categories["Violence"]:
-        flags.append("🔴 Violence Detected (Video)")
-    return flags or ["✅ No Issues Detected"]
+    results = []
+
+    simulated_checks = {
+        "NSFW": ext in [".jpg", ".jpeg", ".png"],
+        "Profanity": ext in [".mp3", ".wav"],
+        "Violence": ext == ".mp4"
+    }
+
+    for category, detected in simulated_checks.items():
+        if category not in categories:
+            continue
+        allowed = categories[category]
+        score = round(random.uniform(0.01, 0.99), 2) if detected else round(random.uniform(0.01, 0.3), 2)
+        status = "✅ Allowed" if allowed else "❌ Blocked"
+        detection = "Detected" if detected else "Not Detected"
+        icon = "✅" if not detected else "🚫" if not allowed else "⚠️"
+        results.append(f"{icon} **Category:** {category} | **{status}** | **Score:** {score} | **Result:** {detection}")
+
+    return results
+
 
 # Chat-like input area
 with st.chat_message("user"):
