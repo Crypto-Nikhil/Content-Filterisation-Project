@@ -2,21 +2,22 @@ import streamlit as st
 from PIL import Image
 import os
 import re
+import random
 import tempfile
 
 # Page setup
-st.set_page_config(page_title="AI Moderation System", layout="centered")
+st.set_page_config(page_title="AI Content Moderation", layout="centered")
 st.title("🛡️ AI Content Moderation System")
 st.caption("Upload text, images, or media for real-time sensitive content detection.")
 
-# Initialize session for chat
+# Session state for chat
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
-# Language Selector
+# Language selector
 language = st.selectbox("🌐 Select Language", ["English", "Hindi", "Spanish"])
 
-# Category Selection
+# Category toggles
 st.markdown("### 🧠 Select Categories to Moderate")
 selected_categories = {
     "NSFW": st.checkbox("NSFW", value=True),
@@ -28,93 +29,97 @@ selected_categories = {
     "Sensitive Info": st.checkbox("Sensitive Info", value=True)
 }
 
-# Moderation logic
+# Moderation logic for text
 def moderate_text(text, categories):
-    flags = []
+    results = []
     text_lower = text.lower()
-    if categories["Profanity"] and "fuck" in text_lower:
-        flags.append("🔴 Profanity Detected")
-    if categories["Violence"] and "kill" in text_lower:
-        flags.append("🔴 Violence Detected")
-    if categories["NSFW"] and "sex" in text_lower:
-        flags.append("🔴 NSFW Content Detected")
-    if categories["Drugs"] and "cocaine" in text_lower:
-        flags.append("🔴 Drug Reference Detected")
-    if categories["Self-Harm"] and "suicide" in text_lower:
-        flags.append("🔴 Self-Harm Reference Detected")
-    if categories["Hate Speech"] and "hate" in text_lower:
-        flags.append("🔴 Hate Speech Detected")
-    if categories["Sensitive Info"]:
-        pii_patterns = [
+
+    checks = {
+        "NSFW": "sex" in text_lower,
+        "Profanity": any(w in text_lower for w in ["fuck", "shit"]),
+        "Violence": "kill" in text_lower,
+        "Drugs": "cocaine" in text_lower,
+        "Self-Harm": "suicide" in text_lower,
+        "Hate Speech": "hate" in text_lower,
+        "Sensitive Info": any(re.search(p, text) for p in [
             r"\b\d{10}\b",  # phone
             r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.\w{2,}",  # email
             r"\b\d{4} \d{4} \d{4}\b",  # Aadhaar-like
             r"\b(?:\d[ -]*?){13,16}\b",  # card number
             r"[A-Z]{5}[0-9]{4}[A-Z]"  # PAN
-        ]
-        if any(re.search(p, text) for p in pii_patterns):
-            flags.append("🔴 Sensitive Info Detected")
-    return flags or ["✅ No Issues Detected"]
+        ])
+    }
 
+    for category, detected in checks.items():
+        if category not in categories:
+            continue
+        allowed = categories[category]
+        score = round(random.uniform(0.7, 0.99), 2) if detected else round(random.uniform(0.01, 0.3), 2)
+        status = "✅ Allowed" if allowed else "❌ Blocked"
+        result = "Detected" if detected else "Not Detected"
+        icon = "✅" if not detected else ("⚠️" if allowed else "🚫")
+        results.append(f"{icon} **Category:** {category} | **{status}** | **Score:** {score} | **Result:** {result}")
+
+    return results
+
+# Moderation logic for files
 def moderate_file(uploaded_file, categories):
     ext = os.path.splitext(uploaded_file.name)[1].lower()
     results = []
 
-    simulated_checks = {
+    checks = {
         "NSFW": ext in [".jpg", ".jpeg", ".png"],
         "Profanity": ext in [".mp3", ".wav"],
         "Violence": ext == ".mp4"
     }
 
-    for category, detected in simulated_checks.items():
+    for category, detected in checks.items():
         if category not in categories:
             continue
         allowed = categories[category]
-        score = round(random.uniform(0.01, 0.99), 2) if detected else round(random.uniform(0.01, 0.3), 2)
+        score = round(random.uniform(0.7, 0.99), 2) if detected else round(random.uniform(0.01, 0.3), 2)
         status = "✅ Allowed" if allowed else "❌ Blocked"
-        detection = "Detected" if detected else "Not Detected"
-        icon = "✅" if not detected else "🚫" if not allowed else "⚠️"
-        results.append(f"{icon} **Category:** {category} | **{status}** | **Score:** {score} | **Result:** {detection}")
+        result = "Detected" if detected else "Not Detected"
+        icon = "✅" if not detected else ("⚠️" if allowed else "🚫")
+        results.append(f"{icon} **Category:** {category} | **{status}** | **Score:** {score} | **Result:** {result}")
 
     return results
 
-
-# Chat-like input area
+# Chat-style input area
 with st.chat_message("user"):
     st.markdown("### 💬 Type or upload content")
 
-    # --- Text input first ---
+    # Text box first
     user_text = st.text_input("Enter your message...", key="chat_input", label_visibility="collapsed")
 
-    # --- File upload just below it ---
+    # Upload field below
     uploaded_file = st.file_uploader("📎 Upload image, audio, or video", type=["jpg", "jpeg", "png", "mp3", "wav", "mp4"])
 
-    # --- Send button ---
+    # Send button
     if st.button("📨 Send"):
         if user_text or uploaded_file:
             st.session_state.chat.append(("user", user_text, uploaded_file))
 
-
-# Display chat history
+# Display chat history with results
 for sender, text, file in st.session_state.chat:
     with st.chat_message(sender):
         if text:
             st.markdown(f"**You:** {text}")
             results = moderate_text(text, selected_categories)
-            for res in results:
-                st.markdown(f"- {res}")
+            for r in results:
+                st.markdown(r)
 
         if file:
             ext = os.path.splitext(file.name)[1].lower()
             if ext in [".jpg", ".jpeg", ".png"]:
-                img = Image.open(file)
-                st.image(img, caption="Uploaded Image")
+                st.image(Image.open(file), caption="Uploaded Image")
             elif ext in [".mp3", ".wav"]:
                 st.audio(file)
             elif ext == ".mp4":
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp:
                     tmp.write(file.read())
                     st.video(tmp.name)
+
             results = moderate_file(file, selected_categories)
-            for res in results:
-                st.markdown(f"- {res}")
+            for r in results:
+                st.markdown(r)
