@@ -70,15 +70,18 @@ def moderate_file(uploaded_file, categories):
 # Chat-like input area
 with st.chat_message("user"):
     st.markdown("### 💬 Type or upload content")
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        user_text = st.text_input("Enter text here...", key="chat_input", label_visibility="collapsed")
-    with col2:
-        uploaded_file = st.file_uploader("📎", type=["jpg", "jpeg", "png", "mp3", "wav", "mp4"], label_visibility="collapsed", key="upload")
 
+    # --- Text input first ---
+    user_text = st.text_input("Enter your message...", key="chat_input", label_visibility="collapsed")
+
+    # --- File upload just below it ---
+    uploaded_file = st.file_uploader("📎 Upload image, audio, or video", type=["jpg", "jpeg", "png", "mp3", "wav", "mp4"])
+
+    # --- Send button ---
     if st.button("📨 Send"):
         if user_text or uploaded_file:
             st.session_state.chat.append(("user", user_text, uploaded_file))
+
 
 # Display chat history
 for sender, text, file in st.session_state.chat:
