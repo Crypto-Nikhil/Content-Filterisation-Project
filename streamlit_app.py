@@ -17,9 +17,9 @@ if "chat" not in st.session_state:
 # Language selector
 language = st.selectbox("🌐 Select Language", ["English", "Hindi", "Spanish"])
 
-# Category toggles
-st.markdown("### 🧠 Select Categories to Moderate")
-selected_categories = {
+# Category toggles: CHECKED means BLOCK
+st.markdown("### 🧠 Select Categories to Block")
+blocked_categories = {
     "NSFW": st.checkbox("NSFW", value=True),
     "Hate Speech": st.checkbox("Hate Speech", value=True),
     "Violence": st.checkbox("Violence", value=True),
@@ -53,7 +53,7 @@ def moderate_text(text, categories):
     for category, detected in checks.items():
         if category not in categories:
             continue
-        allowed = categories[category]
+        allowed = not categories[category]  # Invert: checked = block
         score = round(random.uniform(0.7, 0.99), 2) if detected else round(random.uniform(0.01, 0.3), 2)
         status = "✅ Allowed" if allowed else "❌ Blocked"
         result = "Detected" if detected else "Not Detected"
@@ -76,7 +76,7 @@ def moderate_file(uploaded_file, categories):
     for category, detected in checks.items():
         if category not in categories:
             continue
-        allowed = categories[category]
+        allowed = not categories[category]  # Invert: checked = block
         score = round(random.uniform(0.7, 0.99), 2) if detected else round(random.uniform(0.01, 0.3), 2)
         status = "✅ Allowed" if allowed else "❌ Blocked"
         result = "Detected" if detected else "Not Detected"
@@ -92,11 +92,11 @@ with st.chat_message("user"):
     # Text box first
     user_text = st.text_input("Enter your message...", key="chat_input", label_visibility="collapsed")
 
-    # Upload field below
+    # Upload field below the textbox
     uploaded_file = st.file_uploader("📎 Upload image, audio, or video", type=["jpg", "jpeg", "png", "mp3", "wav", "mp4"])
 
     # Send button
-    if st.button("📨 Send"):
+    if st.button("📨 upload"):
         if user_text or uploaded_file:
             st.session_state.chat.append(("user", user_text, uploaded_file))
 
@@ -105,7 +105,7 @@ for sender, text, file in st.session_state.chat:
     with st.chat_message(sender):
         if text:
             st.markdown(f"**You:** {text}")
-            results = moderate_text(text, selected_categories)
+            results = moderate_text(text, blocked_categories)
             for r in results:
                 st.markdown(r)
 
@@ -120,6 +120,6 @@ for sender, text, file in st.session_state.chat:
                     tmp.write(file.read())
                     st.video(tmp.name)
 
-            results = moderate_file(file, selected_categories)
+            results = moderate_file(file, blocked_categories)
             for r in results:
                 st.markdown(r)
