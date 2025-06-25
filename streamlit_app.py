@@ -19,17 +19,26 @@ if "chat" not in st.session_state:
 # Language selector
 language = st.selectbox("🌐 Select Language", ["English", "Hindi", "Spanish"])
 
-# Category toggles: CHECKED means BLOCK
 st.markdown("### 🧠 Select Categories to Block")
+
 blocked_categories = {
-    "NSFW": st.checkbox("NSFW", value=True),
-    "Hate Speech": st.checkbox("Hate Speech", value=True),
-    "Violence": st.checkbox("Violence", value=True),
-    "Profanity": st.checkbox("Profanity", value=True),
-    "Drugs": st.checkbox("Drugs"),
-    "Self-Harm": st.checkbox("Self-Harm"),
-    "Sensitive Info": st.checkbox("Sensitive Info", value=True)
+    "pii": st.checkbox("PII", value=True),
+    "hate": st.checkbox("Hate", value=True),
+    "violence": st.checkbox("Violence", value=True),
+    "religious": st.checkbox("Religious", value=True),
+    "spam": st.checkbox("Spam", value=True),
+    "hatespeech": st.checkbox("Hate Speech", value=True),
+    "injection": st.checkbox("Injection", value=True),
+    "fraud": st.checkbox("Fraud", value=True),
+    "malware": st.checkbox("Malware", value=True),
+    "prompt": st.checkbox("Prompt Injection", value=True),
+    "copyright": st.checkbox("Copyright Violation", value=True),
+    "confidential": st.checkbox("Confidential Info", value=True),
+    "images": st.checkbox("Image Policy Violations", value=True),
+    "toxicity": st.checkbox("Toxicity", value=True),
+    "nsfw": st.checkbox("NSFW", value=True),
 }
+
 
 # Moderation logic for text
 def moderate_text(text, categories_ui):
