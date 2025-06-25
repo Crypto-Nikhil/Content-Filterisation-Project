@@ -1,3 +1,5 @@
+from moderation_model import predict_text
+
 import streamlit as st
 from PIL import Image
 import os
@@ -30,37 +32,34 @@ blocked_categories = {
 }
 
 # Moderation logic for text
-def moderate_text(text, categories):
+def moderate_text(text, categories_ui):
+    predictions = predict_text(text)
     results = []
-    text_lower = text.lower()
+    block_flag = False
 
-    checks = {
-        "NSFW": "sex" in text_lower,
-        "Profanity": any(w in text_lower for w in ["fuck", "shit"]),
-        "Violence": "kill" in text_lower,
-        "Drugs": "cocaine" in text_lower,
-        "Self-Harm": "suicide" in text_lower,
-        "Hate Speech": "hate" in text_lower,
-        "Sensitive Info": any(re.search(p, text) for p in [
-            r"\b\d{10}\b",  # phone
-            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.\w{2,}",  # email
-            r"\b\d{4} \d{4} \d{4}\b",  # Aadhaar-like
-            r"\b(?:\d[ -]*?){13,16}\b",  # card number
-            r"[A-Z]{5}[0-9]{4}[A-Z]"  # PAN
-        ])
-    }
-
-    for category, detected in checks.items():
-        if category not in categories:
+    for category, (detected, score) in predictions.items():
+        if category not in categories_ui:
             continue
-        allowed = not categories[category]  # Invert: checked = block
-        score = round(random.uniform(0.7, 0.99), 2) if detected else round(random.uniform(0.01, 0.3), 2)
-        status = "✅ Allowed" if allowed else "❌ Blocked"
+
+        to_block = categories_ui[category]   # True = block this category
+        allow = not (to_block and detected)  # If blocked & detected → not allowed
+        status = "✅ Allowed" if allow else "❌ Blocked"
         result = "Detected" if detected else "Not Detected"
-        icon = "✅" if not detected else ("⚠️" if allowed else "🚫")
-        results.append(f"{icon} **Category:** {category} | **{status}** | **Score:** {score} | **Result:** {result}")
+        icon = "✅" if not detected else ("⚠️" if allow else "🚫")
+
+        if to_block and detected:
+            block_flag = True
+
+        results.append(f"{icon} **Category:** {category} | **{status}** | **Score:** {score:.2f} | **Result:** {result}")
+
+    # Show final moderation status
+    if block_flag:
+        st.warning("🚫 This content was BLOCKED based on selected guardrails.")
+    else:
+        st.success("✅ This content PASSED moderation.")
 
     return results
+
 
 # Moderation logic for files
 def moderate_file(uploaded_file, categories):
